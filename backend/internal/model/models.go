@@ -100,3 +100,38 @@ type ProjectDetailResponse struct {
 type ListResponse struct {
 	Data any `json:"data"`
 }
+
+type PaginatedResponse struct {
+	Data  any `json:"data"`
+	Total int `json:"total"`
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
+}
+
+// Raw types returned by repository (no business/display logic)
+
+type StatusCount struct {
+	Status string
+	Count  int
+}
+
+type AssigneeCount struct {
+	AssigneeID *string
+	Name       *string
+	Count      int
+}
+
+// API response types (shaped by service layer)
+
+type AssigneeStat struct {
+	AssigneeID *string `json:"assignee_id"`
+	Name       string  `json:"assignee_name"`
+	Count      int     `json:"count"`
+}
+
+type ProjectStatsResponse struct {
+	Todo       int             `json:"todo"`
+	InProgress int             `json:"in_progress"`
+	Done       int             `json:"done"`
+	ByAssignee []*AssigneeStat `json:"by_assignee"`
+}

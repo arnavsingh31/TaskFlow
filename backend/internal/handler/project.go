@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"go.uber.org/zap"
 
@@ -27,13 +28,40 @@ func NewProjectHandler(projectService *service.ProjectService, logger *zap.Logge
 func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 
-	projects, err := h.projectService.List(r.Context(), userID)
+	// Parse and validate pagination params
+	page := 1
+	limit := 10
+
+	if p := r.URL.Query().Get("page"); p != "" {
+		parsed, err := strconv.Atoi(p)
+		if err != nil || parsed < 1 {
+			respondError(w, http.StatusBadRequest, "page must be a positive integer")
+			return
+		}
+		page = parsed
+	}
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 1 || parsed > 100 {
+			respondError(w, http.StatusBadRequest, "limit must be between 1 and 100")
+			return
+		}
+		limit = parsed
+	}
+
+	projects, total, err := h.projectService.List(r.Context(), userID, page, limit)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	respondJSON(w, http.StatusOK, &model.ListResponse{Data: projects})
+	respondJSON(w, http.StatusOK, &model.PaginatedResponse{
+		Data:  projects,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }
 
 func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -126,4 +154,20 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ProjectHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	projectID := r.PathValue("id")
+
+	stats, err := h.projectService.Stats(r.Context(), projectID)
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			respondError(w, http.StatusNotFound, "not found")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, stats)
 }

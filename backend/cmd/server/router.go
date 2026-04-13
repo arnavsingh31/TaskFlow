@@ -31,6 +31,7 @@ func newRouter(
 	mux.HandleFunc("GET /projects/{id}", authMW(projectHandler.Get))
 	mux.HandleFunc("PATCH /projects/{id}", authMW(projectHandler.Update))
 	mux.HandleFunc("DELETE /projects/{id}", authMW(projectHandler.Delete))
+	mux.HandleFunc("GET /projects/{id}/stats", authMW(projectHandler.Stats))
 
 	mux.HandleFunc("GET /users/search", authMW(userHandler.Search))
 

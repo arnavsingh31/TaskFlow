@@ -15,14 +15,15 @@ func NewProjectRepo(db *sql.DB) *ProjectRepo {
 	return &ProjectRepo{db: db}
 }
 
-func (r *ProjectRepo) List(ctx context.Context, userID string) ([]*model.Project, error) {
+func (r *ProjectRepo) List(ctx context.Context, userID string, limit, offset int) ([]*model.Project, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT DISTINCT p.id, p.name, p.description, p.owner_id, p.deleted_at, p.created_at
 		 FROM projects p
 		 LEFT JOIN tasks t ON t.project_id = p.id AND t.assignee_id = $1 AND t.deleted_at IS NULL
 		 WHERE (p.owner_id = $1 OR t.assignee_id = $1) AND p.deleted_at IS NULL
-		 ORDER BY p.created_at DESC`,
-		userID,
+		 ORDER BY p.created_at DESC
+		 LIMIT $2 OFFSET $3`,
+		userID, limit, offset,
 	)
 	if err != nil {
 		return nil, err
@@ -38,6 +39,18 @@ func (r *ProjectRepo) List(ctx context.Context, userID string) ([]*model.Project
 		projects = append(projects, p)
 	}
 	return projects, rows.Err()
+}
+
+func (r *ProjectRepo) Count(ctx context.Context, userID string) (int, error) {
+	var total int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(DISTINCT p.id)
+		 FROM projects p
+		 LEFT JOIN tasks t ON t.project_id = p.id AND t.assignee_id = $1 AND t.deleted_at IS NULL
+		 WHERE (p.owner_id = $1 OR t.assignee_id = $1) AND p.deleted_at IS NULL`,
+		userID,
+	).Scan(&total)
+	return total, err
 }
 
 func (r *ProjectRepo) GetByID(ctx context.Context, id string) (*model.Project, error) {
@@ -111,4 +124,67 @@ func scanProject(row *sql.Row) (*model.Project, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+func (r *ProjectRepo) GetStatsByStatus(ctx context.Context, projectID string) ([]model.StatusCount, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT t.status, COUNT(DISTINCT t.id) AS status_count
+		 FROM projects AS p
+		 INNER JOIN tasks AS t ON p.id = t.project_id
+		 WHERE p.id = $1
+		 AND p.deleted_at IS NULL
+		 AND t.deleted_at IS NULL
+		 GROUP BY t.status`,
+		projectID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var counts []model.StatusCount
+	for rows.Next() {
+		var sc model.StatusCount
+		if err := rows.Scan(&sc.Status, &sc.Count); err != nil {
+			return nil, err
+		}
+		counts = append(counts, sc)
+	}
+	return counts, rows.Err()
+}
+
+func (r *ProjectRepo) GetStatsByAssignee(ctx context.Context, projectID string) ([]model.AssigneeCount, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT t.assignee_id, u.name, COUNT(DISTINCT t.id) AS task_count
+		 FROM projects AS p
+		 INNER JOIN tasks AS t ON p.id = t.project_id
+		 LEFT JOIN users AS u ON t.assignee_id = u.id
+		 WHERE p.id = $1
+		 AND p.deleted_at IS NULL
+		 AND t.deleted_at IS NULL
+		 GROUP BY t.assignee_id, u.name`,
+		projectID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var counts []model.AssigneeCount
+	for rows.Next() {
+		var ac model.AssigneeCount
+		var assigneeID sql.NullString
+		var name sql.NullString
+		if err := rows.Scan(&assigneeID, &name, &ac.Count); err != nil {
+			return nil, err
+		}
+		if assigneeID.Valid {
+			ac.AssigneeID = &assigneeID.String
+		}
+		if name.Valid {
+			ac.Name = &name.String
+		}
+		counts = append(counts, ac)
+	}
+	return counts, rows.Err()
 }

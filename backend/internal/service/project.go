@@ -27,16 +27,23 @@ func NewProjectService(db *sql.DB, projectRepo *repository.ProjectRepo, idempote
 	}
 }
 
-func (s *ProjectService) List(ctx context.Context, userID string) ([]*model.Project, error) {
-	projects, err := s.projectRepo.List(ctx, userID)
+func (s *ProjectService) List(ctx context.Context, userID string, page, limit int) ([]*model.Project, int, error) {
+	total, err := s.projectRepo.Count(ctx, userID)
+	if err != nil {
+		s.logger.Error("failed to count projects", zap.Error(err))
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	projects, err := s.projectRepo.List(ctx, userID, limit, offset)
 	if err != nil {
 		s.logger.Error("failed to list projects", zap.Error(err))
-		return nil, err
+		return nil, 0, err
 	}
 	if projects == nil {
 		projects = []*model.Project{}
 	}
-	return projects, nil
+	return projects, total, nil
 }
 
 func (s *ProjectService) GetByID(ctx context.Context, id string) (*model.ProjectDetailResponse, error) {
@@ -161,4 +168,62 @@ func (s *ProjectService) Delete(ctx context.Context, userID, projectID string) e
 
 	s.logger.Info("project deleted", zap.String("project_id", projectID))
 	return nil
+}
+
+func (s *ProjectService) Stats(ctx context.Context, projectID string) (*model.ProjectStatsResponse, error) {
+	// Verify project exists
+	_, err := s.projectRepo.GetByID(ctx, projectID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		s.logger.Error("failed to get project for stats", zap.Error(err))
+		return nil, err
+	}
+
+	statusCounts, err := s.projectRepo.GetStatsByStatus(ctx, projectID)
+	if err != nil {
+		s.logger.Error("failed to get status stats", zap.Error(err))
+		return nil, err
+	}
+
+	assigneeCounts, err := s.projectRepo.GetStatsByAssignee(ctx, projectID)
+	if err != nil {
+		s.logger.Error("failed to get assignee stats", zap.Error(err))
+		return nil, err
+	}
+
+	// Build response — defaults to 0 for missing statuses
+	response := &model.ProjectStatsResponse{
+		Todo:       0,
+		InProgress: 0,
+		Done:       0,
+	}
+
+	for _, sc := range statusCounts {
+		switch sc.Status {
+		case "todo":
+			response.Todo = sc.Count
+		case "in_progress":
+			response.InProgress = sc.Count
+		case "done":
+			response.Done = sc.Count
+		}
+	}
+
+	byAssignee := make([]*model.AssigneeStat, 0, len(assigneeCounts))
+	for _, ac := range assigneeCounts {
+		name := "Unassigned"
+		if ac.Name != nil {
+			name = *ac.Name
+		}
+		byAssignee = append(byAssignee, &model.AssigneeStat{
+			AssigneeID: ac.AssigneeID,
+			Name:       name,
+			Count:      ac.Count,
+		})
+	}
+	response.ByAssignee = byAssignee
+
+	return response, nil
 }
