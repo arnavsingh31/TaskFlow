@@ -17,6 +17,12 @@ func connectDB(dbURL string, logger *zap.Logger) *sql.DB {
 		logger.Fatal("failed to open database", zap.Error(err))
 	}
 
+	// Connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(1 * time.Minute)
+
 	for i := 0; i < 30; i++ {
 		if err := db.Ping(); err == nil {
 			break
