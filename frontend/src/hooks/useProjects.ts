@@ -1,24 +1,30 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/axios";
-import type { Project, ListResponse } from "@/lib/types";
+import type { Project, PaginatedResponse } from "@/lib/types";
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(9);
+  const [total, setTotal] = useState(0);
 
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get<ListResponse<Project>>("/projects");
+      const res = await api.get<PaginatedResponse<Project>>(
+        `/projects?page=${page}&limit=${limit}`
+      );
       setProjects(res.data.data || []);
+      setTotal(res.data.total);
       setError("");
     } catch {
       setError("Failed to load projects");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit]);
 
   useEffect(() => {
     fetchProjects();
@@ -31,13 +37,28 @@ export function useProjects() {
       { headers: { "X-Idempotency-Key": crypto.randomUUID() } }
     );
     setProjects((prev) => [res.data, ...prev]);
+    setTotal((prev) => prev + 1);
     return res.data;
   };
 
   const deleteProject = async (id: string) => {
     await api.delete(`/projects/${id}`);
     setProjects((prev) => prev.filter((p) => p.id !== id));
+    setTotal((prev) => prev - 1);
   };
 
-  return { projects, loading, error, createProject, deleteProject, refetch: fetchProjects };
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    projects,
+    loading,
+    error,
+    createProject,
+    deleteProject,
+    refetch: fetchProjects,
+    page,
+    setPage,
+    total,
+    totalPages,
+  };
 }

@@ -3,9 +3,20 @@ import ProjectCard from "@/components/projects/ProjectCard";
 import ProjectForm from "@/components/projects/ProjectForm";
 import Navbar from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
+import { FullPageSpinner } from "@/components/ui/spinner";
 
 export default function ProjectsPage() {
-  const { projects, loading, error, createProject, refetch } = useProjects();
+  const {
+    projects,
+    loading,
+    error,
+    createProject,
+    refetch,
+    page,
+    setPage,
+    total,
+    totalPages,
+  } = useProjects();
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,11 +31,7 @@ export default function ProjectsPage() {
           />
         </div>
 
-        {loading && (
-          <div className="text-center py-12 text-muted-foreground">
-            Loading projects...
-          </div>
-        )}
+        {loading && <FullPageSpinner message="Loading projects..." />}
 
         {error && (
           <div className="text-center py-12">
@@ -45,11 +52,37 @@ export default function ProjectsPage() {
         )}
 
         {!loading && !error && projects.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {projects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages} ({total} projects)
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

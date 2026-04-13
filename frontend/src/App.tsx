@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import { Spinner } from "@/components/ui/spinner";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import ProjectsPage from "@/pages/ProjectsPage";
@@ -18,7 +19,7 @@ function ProtectedRoute() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -31,7 +32,7 @@ function GuestRoute() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        <Spinner size="lg" />
       </div>
     );
   }

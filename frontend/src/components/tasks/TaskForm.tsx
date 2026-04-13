@@ -9,8 +9,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { STATUS_LABELS, PRIORITY_LABELS } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -158,7 +158,7 @@ export default function TaskForm({ onSubmit, editTask, onUpdate, open, onOpenCha
         <div className="space-y-2">
           <Label>Status</Label>
           <Select value={status} onValueChange={(v) => v && setStatus(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger><span>{STATUS_LABELS[status] || status}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="todo">Todo</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
@@ -169,7 +169,7 @@ export default function TaskForm({ onSubmit, editTask, onUpdate, open, onOpenCha
         <div className="space-y-2">
           <Label>Priority</Label>
           <Select value={priority} onValueChange={(v) => v && setPriority(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger><span>{PRIORITY_LABELS[priority] || priority}</span></SelectTrigger>
             <SelectContent>
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>

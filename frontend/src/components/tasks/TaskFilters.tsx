@@ -4,8 +4,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { STATUS_LABELS } from "@/lib/types";
 
 interface Props {
   statusFilter: string;
@@ -13,12 +13,19 @@ interface Props {
   onClear: () => void;
 }
 
+const filterLabels: Record<string, string> = {
+  all: "All Statuses",
+  ...STATUS_LABELS,
+};
+
 export default function TaskFilters({ statusFilter, onStatusChange, onClear }: Props) {
+  const current = statusFilter || "all";
+
   return (
     <div className="flex items-center gap-3">
-      <Select value={statusFilter || "all"} onValueChange={(val) => val !== null && onStatusChange(val === "all" ? "" : val)}>
+      <Select value={current} onValueChange={(val) => val !== null && onStatusChange(val === "all" ? "" : val)}>
         <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="Filter by status" />
+          <span>{filterLabels[current] || current}</span>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Statuses</SelectItem>

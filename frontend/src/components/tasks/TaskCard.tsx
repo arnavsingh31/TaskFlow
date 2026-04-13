@@ -7,7 +7,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 
 interface Props {
@@ -56,7 +55,7 @@ export default function TaskCard({ task, onStatusChange, onDelete, onEdit }: Pro
           onValueChange={(val) => val && onStatusChange(task.id, val)}
         >
           <SelectTrigger className="w-[140px] h-8 text-xs">
-            <SelectValue placeholder={STATUS_LABELS[task.status] || task.status} />
+            <span>{STATUS_LABELS[task.status] || task.status}</span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todo">Todo</SelectItem>

@@ -42,6 +42,26 @@ export interface ListResponse<T> {
   data: T[];
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AssigneeStat {
+  assignee_id: string | null;
+  assignee_name: string;
+  count: number;
+}
+
+export interface ProjectStats {
+  todo: number;
+  in_progress: number;
+  done: number;
+  by_assignee: AssigneeStat[];
+}
+
 export interface ApiError {
   error: string;
   fields?: Record<string, string>;
