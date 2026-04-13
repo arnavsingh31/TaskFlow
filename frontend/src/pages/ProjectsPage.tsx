@@ -4,6 +4,7 @@ import ProjectForm from "@/components/projects/ProjectForm";
 import Navbar from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { FullPageSpinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 
 export default function ProjectsPage() {
   const {
@@ -27,6 +28,7 @@ export default function ProjectsPage() {
           <ProjectForm
             onSubmit={async (name, desc) => {
               await createProject(name, desc);
+              toast.success("Project created");
             }}
           />
         </div>

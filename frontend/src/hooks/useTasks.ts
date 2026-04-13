@@ -55,7 +55,7 @@ export function useTasks(projectId: string) {
       data,
       { headers: { "X-Idempotency-Key": crypto.randomUUID() } }
     );
-    setTasks((prev) => [res.data, ...prev]);
+    setPage(1);
     setTotal((prev) => prev + 1);
     return res.data;
   };
@@ -78,8 +78,14 @@ export function useTasks(projectId: string) {
 
   const deleteTask = async (taskId: string) => {
     await api.delete(`/tasks/${taskId}`);
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    setTotal((prev) => prev - 1);
+    const newTotal = total - 1;
+    const newTotalPages = Math.ceil(newTotal / limit);
+    if (page > newTotalPages && newTotalPages > 0) {
+      setPage(newTotalPages);
+    } else {
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    }
+    setTotal(newTotal);
   };
 
   const totalPages = Math.ceil(total / limit);

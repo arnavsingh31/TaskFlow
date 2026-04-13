@@ -116,14 +116,26 @@ export default function TaskForm({ onSubmit, editTask, onUpdate, open, onOpenCha
     setLoading(true);
     setError("");
     try {
+      // Auto-verify if email is typed but not verified
+      let resolvedAssigneeId = assigneeId;
+      if (assigneeEmail.trim() && !assigneeId && !assigneeCleared) {
+        try {
+          const res = await api.get(`/users/search?email=${encodeURIComponent(assigneeEmail)}`);
+          resolvedAssigneeId = res.data.id;
+        } catch {
+          setError("Could not find user with email: " + assigneeEmail);
+          setLoading(false);
+          return;
+        }
+      }
+
       const data: any = { title, status, priority };
       if (description) data.description = description;
       if (dueDate) data.due_date = dueDate;
 
-      if (assigneeId) {
-        data.assignee_id = assigneeId;
+      if (resolvedAssigneeId) {
+        data.assignee_id = resolvedAssigneeId;
       } else if (assigneeCleared && editTask) {
-        // Explicitly clear the assignment
         data.assignee_id = "";
       }
 

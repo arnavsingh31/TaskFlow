@@ -36,15 +36,21 @@ export function useProjects() {
       { name, description },
       { headers: { "X-Idempotency-Key": crypto.randomUUID() } }
     );
-    setProjects((prev) => [res.data, ...prev]);
+    setPage(1);
     setTotal((prev) => prev + 1);
     return res.data;
   };
 
   const deleteProject = async (id: string) => {
     await api.delete(`/projects/${id}`);
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    setTotal((prev) => prev - 1);
+    const newTotal = total - 1;
+    const newTotalPages = Math.ceil(newTotal / limit);
+    if (page > newTotalPages && newTotalPages > 0) {
+      setPage(newTotalPages);
+    } else {
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    }
+    setTotal(newTotal);
   };
 
   const totalPages = Math.ceil(total / limit);

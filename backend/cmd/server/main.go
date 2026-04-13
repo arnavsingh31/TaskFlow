@@ -19,9 +19,6 @@ import (
 
 func main() {
 	cfg := config.Load()
-	if cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET environment variable is required")
-	}
 
 	logger, err := zap.NewProduction()
 	if err != nil {

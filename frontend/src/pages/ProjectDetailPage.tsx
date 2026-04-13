@@ -11,6 +11,7 @@ import TaskFilters from "@/components/tasks/TaskFilters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FullPageSpinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,18 +72,21 @@ export default function ProjectDetailPage() {
   const handleCreateTask = async (data: Parameters<typeof createTask>[0]) => {
     const result = await createTask(data);
     refreshStats();
+    toast.success("Task created");
     return result;
   };
 
   const handleUpdateTask = async (taskId: string, data: Parameters<typeof updateTask>[1]) => {
     const result = await updateTask(taskId, data);
     refreshStats();
+    toast.success("Task updated");
     return result;
   };
 
   const handleDeleteTask = async (taskId: string) => {
     await deleteTask(taskId);
     refreshStats();
+    toast.success("Task deleted");
   };
 
   if (projectLoading) {
