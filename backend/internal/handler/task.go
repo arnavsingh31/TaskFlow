@@ -107,6 +107,16 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject HTML in input
+	if helpers.ContainsHTML(req.Title) || helpers.ContainsHTMLPtr(req.Description) {
+		respondError(w, http.StatusBadRequest, "input contains invalid characters")
+		return
+	}
+
+	// Trim whitespace
+	req.Title = helpers.TrimString(req.Title)
+	req.Description = helpers.TrimPtr(req.Description)
+
 	var keyPtr *string
 	if key := r.Header.Get("X-Idempotency-Key"); key != "" {
 		keyPtr = &key
@@ -146,6 +156,16 @@ func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 		respondValidation(w, fields)
 		return
 	}
+
+	// Reject HTML in input
+	if helpers.ContainsHTMLPtr(req.Title) || helpers.ContainsHTMLPtr(req.Description) {
+		respondError(w, http.StatusBadRequest, "input contains invalid characters")
+		return
+	}
+
+	// Trim whitespace
+	req.Title = helpers.TrimPtr(req.Title)
+	req.Description = helpers.TrimPtr(req.Description)
 
 	task, err := h.taskService.Update(r.Context(), userID, taskID, &req)
 	if err != nil {

@@ -46,6 +46,15 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject HTML in input
+	if helpers.ContainsHTMLPtr(req.Name) {
+		respondError(w, http.StatusBadRequest, "input contains invalid characters")
+		return
+	}
+
+	// Trim whitespace
+	req.Name = helpers.TrimPtr(req.Name)
+
 	user, token, err := h.authService.Register(r.Context(), &req)
 	if err != nil {
 		if errors.Is(err, service.ErrConflict) {

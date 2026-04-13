@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/taskflow/backend/internal/helpers"
 	"github.com/taskflow/backend/internal/middleware"
 	"github.com/taskflow/backend/internal/model"
 	"github.com/taskflow/backend/internal/service"
@@ -94,6 +95,16 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject HTML in input
+	if helpers.ContainsHTML(req.Name) || helpers.ContainsHTMLPtr(req.Description) {
+		respondError(w, http.StatusBadRequest, "input contains invalid characters")
+		return
+	}
+
+	// Trim whitespace
+	req.Name = helpers.TrimString(req.Name)
+	req.Description = helpers.TrimPtr(req.Description)
+
 	var keyPtr *string
 	if key := r.Header.Get("X-Idempotency-Key"); key != "" {
 		keyPtr = &key
@@ -117,6 +128,16 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
+
+	// Reject HTML in input
+	if helpers.ContainsHTMLPtr(req.Name) || helpers.ContainsHTMLPtr(req.Description) {
+		respondError(w, http.StatusBadRequest, "input contains invalid characters")
+		return
+	}
+
+	// Trim whitespace
+	req.Name = helpers.TrimPtr(req.Name)
+	req.Description = helpers.TrimPtr(req.Description)
 
 	project, err := h.projectService.Update(r.Context(), userID, projectID, &req)
 	if err != nil {

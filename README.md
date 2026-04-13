@@ -14,37 +14,53 @@ A full-stack task management system where users register, log in, create project
 
 ## Architecture Decisions
 
-### Standard Library Routing
+### Why Standard Library Over Gin/Chi
 
-Used Go 1.22+'s enhanced `net/http.ServeMux` with method-based routing (`GET /projects/{id}`) instead of a framework like Gin or Chi. This keeps external dependencies minimal and uses Go's native HTTP primitives directly.
+Go 1.22 introduced method-based routing and path parameters in `net/http.ServeMux` — features that previously required a third-party router. Since this project has ~12 routes and straightforward middleware needs, the standard library covers everything without adding framework overhead. The tradeoff is slightly more manual middleware wiring, but the result is zero routing dependencies and code that uses Go's native HTTP types (`http.Request`, `http.ResponseWriter`) throughout.
 
-### Component Library
+### Backend Structure
 
-Frontend uses **Shadcn/ui** (built on Tailwind CSS + Radix/Base UI primitives). Components are copied into the project — no heavy runtime dependency. Provides accessible, customizable UI with minimal bundle overhead.
-
-### Layered Backend Architecture
+The backend follows a layered architecture where each layer has a single responsibility:
 
 ```
 HTTP Request → Middleware → Handler → Service → Repository → PostgreSQL
 ```
 
-- **Handlers** parse requests, validate input, and return responses. They never touch SQL.
-- **Services** contain business logic, authorization checks, and manage transactions.
-- **Repositories** execute SQL queries. Dependencies are injected via struct constructors. No global variables.
+- **Handlers** own the HTTP contract — parse requests, validate input, map errors to status codes, write responses. They never touch SQL or make authorization decisions.
+- **Services** own business logic — authorization checks (is this user the project owner?), transaction management, and orchestrating multiple repository calls within a single transaction.
+- **Repositories** own data access — raw SQL queries with parameterized inputs. They return Go structs and don't know about HTTP or business rules.
 
-### Transaction & Concurrency Safety
+Dependencies flow one direction (handler → service → repository) and are injected via constructors in `main.go`. No global state, no init functions, no service locator patterns.
 
-- All write operations use `WithTx()` wrapper for automatic commit/rollback
-- `SELECT ... FOR UPDATE` locks rows before updates/deletes to prevent race conditions
-- `RETURNING *` on all INSERT/UPDATE ensures the app sees the actual DB state
+This separation was chosen over a simpler flat structure because the project has enough complexity (soft deletes, row locking, idempotency, authorization) that mixing these concerns in handlers would make the code harder to reason about and test.
+
+### Data Integrity
+
+**Transactions:** Every write operation (create, update, delete) runs inside a `WithTx()` wrapper that handles commit/rollback automatically. This ensures multi-step operations (e.g., soft-deleting a project and all its tasks) either fully succeed or fully roll back.
+
+**Row Locking:** Update and delete operations use `SELECT ... FOR UPDATE` to lock the target row before modifying it. This prevents race conditions where two concurrent requests could read stale data and overwrite each other's changes.
+
+**RETURNING clause:** All INSERT and UPDATE queries use `RETURNING *` to get the actual database state back, rather than trusting what was sent. This avoids discrepancies between application state and DB state (e.g., default values, triggers).
 
 ### Soft Deletes
 
-All tables have a `deleted_at` timestamp. DELETE endpoints set `deleted_at = NOW()` instead of removing rows. Partial indexes (`WHERE deleted_at IS NULL`) ensure only active rows are scanned.
+All tables use a `deleted_at TIMESTAMP` column instead of hard deletes. DELETE endpoints set `deleted_at = NOW()` and all SELECT queries include `WHERE deleted_at IS NULL`. Partial indexes (e.g., `CREATE INDEX ... WHERE deleted_at IS NULL`) ensure only active rows are scanned, so deleted rows don't degrade query performance.
+
+The tradeoff is slightly more complex queries (every SELECT needs the filter), but the benefit is data recovery capability and a complete audit trail of when records were removed.
 
 ### Idempotency
 
-POST endpoints accept an `X-Idempotency-Key` header. Keys are scoped per user via a composite primary key `(key, user_id)` to prevent duplicate resource creation from double-clicks or retries.
+POST endpoints for creating projects and tasks accept an `X-Idempotency-Key` header. The key is stored in a table with a composite primary key `(key, user_id)` — scoped per user so two different users can safely use the same key independently. On duplicate requests, the backend returns the originally created resource instead of creating a duplicate.
+
+This was added because double-form-submissions and network retries are common in real usage. The frontend also disables submit buttons during requests as a first layer of defense. In a production system, idempotency keys would ideally live in Redis for faster lookups and built-in TTL expiry, but for the current scope that would add unnecessary infrastructure complexity — a PostgreSQL table with periodic cleanup serves the same purpose.
+
+### Frontend
+
+Next.js was considered but would have added SSR complexity that isn't needed for a dashboard app behind authentication — there are no public pages that benefit from server-side rendering or SEO. Instead, React with TypeScript (Vite) was chosen for a simpler, faster build with client-side rendering. **Shadcn/ui** is used as the component library.
+
+### What Was Intentionally Left Out
+
+- **ORM (GORM, sqlx):** Raw SQL with `database/sql` was chosen for full control over queries, especially for dynamic PATCH updates and complex JOINs. The tradeoff is more boilerplate for scanning rows, but every query is explicit and easy to reason about.
 
 ## Running Locally
 
@@ -159,5 +175,7 @@ GET /users/search?email=john@example.com
 - **Real-time updates** via WebSocket or SSE so multiple users see changes instantly
 - **Rate limiting** on auth endpoints to prevent brute-force attacks
 - **Refresh tokens** with short-lived access tokens instead of single 24h JWTs
-- **Project membership** system with invite/join flow — currently any authenticated user can view any project
+- **Project membership** system with invite/join flow — currently users see projects they own or have tasks in, but a formal member role with permissions would be more robust
 - **Email notifications** when a task is assigned to you or a due date is approaching
+- **User profile page** — view and update name, email, and profile picture
+- **Account/password recovery** — forgot password flow with email-based reset link and token verification
