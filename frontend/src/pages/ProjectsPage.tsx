@@ -59,29 +59,27 @@ export default function ProjectsPage() {
               ))}
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-8">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages} ({total} projects)
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages} ({total} project{total !== 1 ? "s" : ""})
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </>
         )}
       </div>

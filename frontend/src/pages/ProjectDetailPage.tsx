@@ -30,6 +30,10 @@ export default function ProjectDetailPage() {
     statusFilter,
     setStatusFilter,
     refetch,
+    page,
+    setPage,
+    total,
+    totalPages,
   } = useTasks(id!);
 
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -192,20 +196,44 @@ export default function ProjectDetailPage() {
         )}
 
         {!tasksLoading && !tasksError && tasks.length > 0 && (
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onStatusChange={(taskId, status) => handleUpdateTask(taskId, { status: status as Task["status"] })}
-                onDelete={handleDeleteTask}
-                onEdit={(t) => {
-                  setEditTask(t);
-                  setEditOpen(true);
-                }}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {tasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onStatusChange={(taskId, status) => handleUpdateTask(taskId, { status: status as Task["status"] })}
+                  onDelete={handleDeleteTask}
+                  onEdit={(t) => {
+                    setEditTask(t);
+                    setEditOpen(true);
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages} ({total} task{total !== 1 ? "s" : ""})
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </>
         )}
 
         {editTask && (

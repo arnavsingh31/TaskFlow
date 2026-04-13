@@ -20,7 +20,7 @@ func NewTaskRepo(db *sql.DB) *TaskRepo {
 const taskColumnsJoin = "t.id, t.title, t.description, t.status, t.priority, t.project_id, t.assignee_id, u.name, u.email, t.created_by, t.due_date, t.deleted_at, t.created_at, t.updated_at"
 const taskColumnsSimple = "id, title, description, status, priority, project_id, assignee_id, created_by, due_date, deleted_at, created_at, updated_at"
 
-func (r *TaskRepo) ListByProject(ctx context.Context, projectID string, status *string, assigneeID *string) ([]*model.Task, error) {
+func (r *TaskRepo) ListByProject(ctx context.Context, projectID string, status *string, assigneeID *string, limit, offset int) ([]*model.Task, error) {
 	query := "SELECT " + taskColumnsJoin + " FROM tasks t LEFT JOIN users u ON t.assignee_id = u.id WHERE t.project_id = $1 AND t.deleted_at IS NULL"
 	args := []any{projectID}
 	i := 2
@@ -37,6 +37,8 @@ func (r *TaskRepo) ListByProject(ctx context.Context, projectID string, status *
 	}
 
 	query += " ORDER BY t.created_at DESC"
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", i, i+1)
+	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -53,6 +55,27 @@ func (r *TaskRepo) ListByProject(ctx context.Context, projectID string, status *
 		tasks = append(tasks, t)
 	}
 	return tasks, rows.Err()
+}
+
+func (r *TaskRepo) CountByProject(ctx context.Context, projectID string, status *string, assigneeID *string) (int, error) {
+	query := "SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND deleted_at IS NULL"
+	args := []any{projectID}
+	i := 2
+
+	if status != nil {
+		query += fmt.Sprintf(" AND status = $%d", i)
+		args = append(args, *status)
+		i++
+	}
+	if assigneeID != nil {
+		query += fmt.Sprintf(" AND assignee_id = $%d", i)
+		args = append(args, *assigneeID)
+		i++
+	}
+
+	var total int
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&total)
+	return total, err
 }
 
 func (r *TaskRepo) GetByID(ctx context.Context, tx *sql.Tx, id string) (*model.Task, error) {

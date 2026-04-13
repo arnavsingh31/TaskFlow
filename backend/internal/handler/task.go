@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"go.uber.org/zap"
 
@@ -42,7 +43,28 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 		assigneePtr = &assignee
 	}
 
-	tasks, err := h.taskService.ListByProject(r.Context(), projectID, statusPtr, assigneePtr)
+	page := 1
+	limit := 10
+
+	if p := r.URL.Query().Get("page"); p != "" {
+		parsed, err := strconv.Atoi(p)
+		if err != nil || parsed < 1 {
+			respondError(w, http.StatusBadRequest, "page must be a positive integer")
+			return
+		}
+		page = parsed
+	}
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 1 || parsed > 100 {
+			respondError(w, http.StatusBadRequest, "limit must be between 1 and 100")
+			return
+		}
+		limit = parsed
+	}
+
+	tasks, total, err := h.taskService.ListByProject(r.Context(), projectID, statusPtr, assigneePtr, page, limit)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
 			respondError(w, http.StatusNotFound, "not found")
@@ -52,7 +74,12 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, &model.ListResponse{Data: tasks})
+	respondJSON(w, http.StatusOK, &model.PaginatedResponse{
+		Data:  tasks,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
 }
 
 func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {

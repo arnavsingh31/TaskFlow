@@ -29,25 +29,32 @@ func NewTaskService(db *sql.DB, taskRepo *repository.TaskRepo, projectRepo *repo
 	}
 }
 
-func (s *TaskService) ListByProject(ctx context.Context, projectID string, status *string, assigneeID *string) ([]*model.Task, error) {
+func (s *TaskService) ListByProject(ctx context.Context, projectID string, status *string, assigneeID *string, page, limit int) ([]*model.Task, int, error) {
 	_, err := s.projectRepo.GetByID(ctx, projectID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
+			return nil, 0, ErrNotFound
 		}
 		s.logger.Error("failed to verify project", zap.Error(err))
-		return nil, err
+		return nil, 0, err
 	}
 
-	tasks, err := s.taskRepo.ListByProject(ctx, projectID, status, assigneeID)
+	total, err := s.taskRepo.CountByProject(ctx, projectID, status, assigneeID)
+	if err != nil {
+		s.logger.Error("failed to count tasks", zap.Error(err))
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	tasks, err := s.taskRepo.ListByProject(ctx, projectID, status, assigneeID, limit, offset)
 	if err != nil {
 		s.logger.Error("failed to list tasks", zap.Error(err))
-		return nil, err
+		return nil, 0, err
 	}
 	if tasks == nil {
 		tasks = []*model.Task{}
 	}
-	return tasks, nil
+	return tasks, total, nil
 }
 
 func (s *TaskService) Create(ctx context.Context, userID, projectID string, idempotencyKey *string, req *model.CreateTaskRequest) (*model.Task, error) {
