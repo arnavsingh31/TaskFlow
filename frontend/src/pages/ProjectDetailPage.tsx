@@ -208,7 +208,7 @@ export default function ProjectDetailPage() {
 
         {stats && (
           <div className="mb-8">
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               {([
                 { key: "todo" as const, border: "border-l-blue-500", text: "text-blue-600" },
                 { key: "in_progress" as const, border: "border-l-amber-500", text: "text-amber-600" },
