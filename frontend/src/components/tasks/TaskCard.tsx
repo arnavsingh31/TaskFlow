@@ -11,6 +11,7 @@ import {
 
 interface Props {
   task: Task;
+  canDelete: boolean;
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
@@ -22,7 +23,7 @@ const priorityColors: Record<string, string> = {
   low: "bg-green-100 text-green-800",
 };
 
-export default function TaskCard({ task, onStatusChange, onDelete, onEdit }: Props) {
+export default function TaskCard({ task, canDelete, onStatusChange, onDelete, onEdit }: Props) {
   return (
     <div className="border rounded-lg p-4 bg-card">
       <div className="flex items-start justify-between gap-2">
@@ -39,14 +40,16 @@ export default function TaskCard({ task, onStatusChange, onDelete, onEdit }: Pro
             </p>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive shrink-0"
-          onClick={() => onDelete(task.id)}
-        >
-          Delete
-        </Button>
+        {canDelete && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive shrink-0"
+            onClick={() => onDelete(task.id)}
+          >
+            Delete
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mt-3">

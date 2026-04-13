@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/axios";
 import type { Task, PaginatedResponse } from "@/lib/types";
 
-export function useTasks(projectId: string) {
+export function useTasks(projectId: string, pageLimit = 10) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const limit = pageLimit;
   const [total, setTotal] = useState(0);
 
   const fetchTasks = useCallback(async () => {

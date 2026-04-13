@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/axios";
 import type { Project, PaginatedResponse } from "@/lib/types";
 
-export function useProjects() {
+export function useProjects(pageLimit = 9) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const [limit] = useState(9);
+  const limit = pageLimit;
   const [total, setTotal] = useState(0);
 
   const fetchProjects = useCallback(async () => {
