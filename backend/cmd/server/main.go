@@ -40,7 +40,7 @@ func main() {
 	// Services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret, logger)
 	userService := service.NewUserService(userRepo, logger)
-	projectService := service.NewProjectService(db, projectRepo, idempotencyRepo, logger)
+	projectService := service.NewProjectService(db, projectRepo, taskRepo, idempotencyRepo, logger)
 	taskService := service.NewTaskService(db, taskRepo, projectRepo, idempotencyRepo, logger)
 
 	// Handlers

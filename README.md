@@ -14,6 +14,14 @@ A full-stack task management system where users register, log in, create project
 
 ## Architecture Decisions
 
+### Standard Library Routing
+
+Used Go 1.22+'s enhanced `net/http.ServeMux` with method-based routing (`GET /projects/{id}`) instead of a framework like Gin or Chi. This keeps external dependencies minimal and uses Go's native HTTP primitives directly.
+
+### Component Library
+
+Frontend uses **Shadcn/ui** (built on Tailwind CSS + Radix/Base UI primitives). Components are copied into the project — no heavy runtime dependency. Provides accessible, customizable UI with minimal bundle overhead.
+
 ### Layered Backend Architecture
 
 ```
@@ -145,3 +153,11 @@ GET /users/search?email=john@example.com
 | 404 | `{"error": "not found"}` |
 | 409 | `{"error": "email already exists"}` |
 | 500 | `{"error": "internal server error"}` |
+
+## What You'd Do With More Time
+
+- **Real-time updates** via WebSocket or SSE so multiple users see changes instantly
+- **Rate limiting** on auth endpoints to prevent brute-force attacks
+- **Refresh tokens** with short-lived access tokens instead of single 24h JWTs
+- **Project membership** system with invite/join flow — currently any authenticated user can view any project
+- **Email notifications** when a task is assigned to you or a due date is approaching

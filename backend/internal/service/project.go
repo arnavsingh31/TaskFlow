@@ -14,14 +14,16 @@ import (
 type ProjectService struct {
 	db              *sql.DB
 	projectRepo     *repository.ProjectRepo
+	taskRepo        *repository.TaskRepo
 	idempotencyRepo *repository.IdempotencyRepo
 	logger          *zap.Logger
 }
 
-func NewProjectService(db *sql.DB, projectRepo *repository.ProjectRepo, idempotencyRepo *repository.IdempotencyRepo, logger *zap.Logger) *ProjectService {
+func NewProjectService(db *sql.DB, projectRepo *repository.ProjectRepo, taskRepo *repository.TaskRepo, idempotencyRepo *repository.IdempotencyRepo, logger *zap.Logger) *ProjectService {
 	return &ProjectService{
 		db:              db,
 		projectRepo:     projectRepo,
+		taskRepo:        taskRepo,
 		idempotencyRepo: idempotencyRepo,
 		logger:          logger,
 	}
@@ -56,13 +58,22 @@ func (s *ProjectService) GetByID(ctx context.Context, id string) (*model.Project
 		return nil, err
 	}
 
+	tasks, err := s.taskRepo.ListByProject(ctx, id, nil, nil, 100, 0)
+	if err != nil {
+		s.logger.Error("failed to fetch tasks for project", zap.Error(err))
+		return nil, err
+	}
+	if tasks == nil {
+		tasks = []*model.Task{}
+	}
+
 	return &model.ProjectDetailResponse{
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description,
 		OwnerID:     project.OwnerID,
 		CreatedAt:   project.CreatedAt,
-		Tasks:       []*model.Task{},
+		Tasks:       tasks,
 	}, nil
 }
 
