@@ -22,19 +22,7 @@ HTTP Request → Middleware → Handler → Service → Repository → PostgreSQ
 
 - **Handlers** parse requests, validate input, and return responses. They never touch SQL.
 - **Services** contain business logic, authorization checks, and manage transactions.
-- **Repositories** execute SQL queries. They don't know about HTTP or business rules.
-- Dependencies are injected via struct constructors. No global variables.
-
-### Standard Library Routing
-
-Used Go 1.22's enhanced `net/http.ServeMux` with method-based routing (`GET /projects/{id}`) instead of a framework like Gin or Chi. This keeps dependencies minimal and teaches Go's HTTP fundamentals.
-
-### Pointer-Based Models
-
-All struct fields are pointers. This enables:
-- Distinguishing "not sent" (`nil`) from "empty string" in PATCH requests
-- Clean nullable field handling with `sql.NullString` → `*string` conversion
-- `json:"-"` on sensitive fields (password, deleted_at) prevents accidental exposure
+- **Repositories** execute SQL queries. Dependencies are injected via struct constructors. No global variables.
 
 ### Transaction & Concurrency Safety
 
